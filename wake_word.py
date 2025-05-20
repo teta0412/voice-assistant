@@ -3,10 +3,13 @@ import numpy as np
 import openwakeword
 from openwakeword.model import Model
 import argparse
-import sys # Import the sys module
+import sys
 from scipy.signal import resample
+import subprocess # Import the subprocess module
+
 # One-time download of all pre-trained models (or only select models)
 openwakeword.utils.download_models()
+
 # Parse input arguments
 parser=argparse.ArgumentParser()
 parser.add_argument(
@@ -72,9 +75,18 @@ if __name__ == "__main__":
             if scores[-1] > 0.5: # Assuming 0.5 is your detection threshold
                 print("Wakeword Detected!")
                 wakeword_detected = True # Set flag to True
+                break # Exit loop once a wakeword is detected
 
         if wakeword_detected:
+            print("Starting agent.py...")
             mic_stream.stop_stream()
             mic_stream.close()
-            audio.terminate()
-            sys.exit()
+            # Run agent.py as a subprocess
+            agent_process = subprocess.Popen([sys.executable, "agent.py", "console"])
+            agent_process.wait() # Wait for agent.py to finish
+
+            print("Agent terminated. Resuming wake word listening...")
+            # Reinitialize the microphone stream
+            mic_stream = audio.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK, input_device_index=INPUT_DEVICE_ID)
+            owwModel.reset()
+            wakeword_detected = False
